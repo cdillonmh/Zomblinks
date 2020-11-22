@@ -19,4 +19,4 @@
 
  Spawners:
  - Can be destroyed, but regenerate slowly while active.
-
+ - Use them in inactive mode as destructible barriers.
