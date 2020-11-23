@@ -10,6 +10,7 @@
  - Single-click an adjacent empty Blink to move there.
  - Double-click an adjacent empty Blink to fire a bullet in that direction. You (currently) have unlimited ammo.
  - Double-click an adjacent Zombie or spawner to melee for double damage.
+ - Have 3 health. Don't get shot or bitten!
 
  Note: Players can't move or fire adjacent to other players. You can, however, damage other players with bullets, so be careful!
 
