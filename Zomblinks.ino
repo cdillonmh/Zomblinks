@@ -1,22 +1,24 @@
 /*    To Dos:
  *        ~~Necessary~~
  *     - Create start & reset code that propogates to everything
+ *        + From spawners? Maybe triple-click?
  *      
  *        ~~Nice to Have~~
  *     - Animation & effects
  *     - Array and queue for projectile passage through single blink? (rare, but possible and annoying)
  *     
  *        ~~Maybe~~
- *     - Ammo limits and ammo drops (difficult without switching to datagrams)
+ *     - Ammo limits and ammo drops
  *        + move to reload?
  *        + press to reload (rather than switch?)
+ *        + zombies drop ammo?
  */
 
 // Game mechanics variables
 #define TANKMOVETIMEOUTMS 100
 #define DAMAGEDELAYMS 60
 
-// Game Balance variables
+// Game balance variables
 #define WALLHEALTH 6
 #define WALLREGENMS 2500
 #define BULLETDELAY 50
@@ -25,10 +27,10 @@
 #define MELEEDAMAGE 2
 
 // Zombie variables
-#define SHAMBLEDELAY 1800
-#define HUMANSCENT 12
-#define BITEDELAYMS 800
-#define MINHUNGER 1
+#define SHAMBLEDELAY 1400
+#define HUMANSCENT 16
+#define BITEDELAYMS 650
+#define MINHUNGER 2
 #define MAXHUNGER 4
 #define SPAWNTRIGGER 1
 #define SPAWNMAX 500
@@ -295,10 +297,10 @@ void biteTheLiving() {
       if (!attacking){
         biteTimer.set(BITEDELAYMS);
         attacking = true;
+        biteTarget = f;
       } else {
         if (biteTimer.isExpired()) {
           attacking = false;
-          biteTarget = f;
         }
       }
     }
@@ -311,7 +313,7 @@ void checkForZombieSpawn(){
   FOREACH_FACE(f) {
     if (!isValueReceivedOnFaceExpired(f) && getObjectStateFromDirection(f) == HASWALL) {
       spawnerAdjacent = true;
-    } else if (!isValueReceivedOnFaceExpired(f) && getObjectStateFromDirection(f) == HASTANK){
+    } else if (!isValueReceivedOnFaceExpired(f) && getObjectStateFromDirection(f) == HASTANK && getProjectileStateFromDirection(f) == ISUNDEAD){
       noTanksAdjacent = false;
     }
   }
@@ -355,9 +357,9 @@ void checkProjectileSpawn () {
     if (getProjectileStateFromDirection(projectileSource) == HASBULLET) {
       projectileState = HASBULLET;
       startProjectile();
-    } else if (getProjectileStateFromDirection(projectileSource) == HASROCKET) {
-      projectileState = HASROCKET;
-      startProjectile();
+//    } else if (getProjectileStateFromDirection(projectileSource) == HASROCKET) {
+//      projectileState = HASROCKET;
+//      startProjectile();
     }
   }  
 }
@@ -365,8 +367,8 @@ void checkProjectileSpawn () {
 void startProjectile () {
   if (objectState == NOTHING && projectileState == HASBULLET) {
     projectileTimer.set(BULLETDELAY);
-  } else if (objectState == NOTHING && projectileState == HASROCKET) {
-    projectileTimer.set(ROCKETDELAY);
+//  } else if (objectState == NOTHING && projectileState == HASROCKET) {
+//    projectileTimer.set(ROCKETDELAY);
   }
 }
 
@@ -375,9 +377,9 @@ void checkProjectileSend () {
     if (projectileState == HASBULLET) {
       projectileState = SENDBULLET;
     }
-    if (projectileState == HASROCKET) {
-      projectileState = SENDROCKET;
-    }
+//    if (projectileState == HASROCKET) {
+//      projectileState = SENDROCKET;
+//    }
   }
 }
 
@@ -388,10 +390,10 @@ void checkProjectileIncoming () {
         projectileState = RCVBULLET;
         projectileSource = f;
         projectileTarget = (projectileSource + 3) % 6;
-      } else if (!isValueReceivedOnFaceExpired(f) && getProjectileStateFromDirection(f) == SENDROCKET) {
-        projectileState = RCVROCKET;
-        projectileSource = f;
-        projectileTarget = (projectileSource + 3) % 6;
+//      } else if (!isValueReceivedOnFaceExpired(f) && getProjectileStateFromDirection(f) == SENDROCKET) {
+//        projectileState = RCVROCKET;
+//        projectileSource = f;
+//        projectileTarget = (projectileSource + 3) % 6;
       }
     }
   } else if (objectState == HASTANK || objectState == HASWALL) {
@@ -401,10 +403,10 @@ void checkProjectileIncoming () {
         projectileState = RCVBULLET;
         projectileSource = f;
       
-      } else if (!isValueReceivedOnFaceExpired(f) && getProjectileStateFromDirection(f) == SENDROCKET) {
-        tempProjectileStorage = projectileState;
-        projectileState = RCVROCKET;
-        projectileSource = f;
+//      } else if (!isValueReceivedOnFaceExpired(f) && getProjectileStateFromDirection(f) == SENDROCKET) {
+//        tempProjectileStorage = projectileState;
+//        projectileState = RCVROCKET;
+//        projectileSource = f;
       }
     }
   }
@@ -453,13 +455,17 @@ void checkForProjectileReceive () {
 }
 
 void checkProjectileGone () {
-  if (!isValueReceivedOnFaceExpired(projectileSource) && getProjectileStateFromDirection(projectileSource) == NONE) {
+  if (!isValueReceivedOnFaceExpired(projectileSource) && getProjectileStateFromDirection(projectileSource) == ISUNDEAD){
+    projectileState = NONE;
+    projectileSource = -1;
+    projectileTarget = -1;
+  } else if (!isValueReceivedOnFaceExpired(projectileSource) && getProjectileStateFromDirection(projectileSource) == NONE) {
     if (projectileState == RCVBULLET && tempProjectileStorage == NONE) {
       projectileState = HASBULLET;
       startProjectile();
-    } else if (projectileState == RCVROCKET && tempProjectileStorage == NONE) {
-      projectileState = HASROCKET;
-      startProjectile();
+//    } else if (projectileState == RCVROCKET && tempProjectileStorage == NONE) {
+//      projectileState = HASROCKET;
+//      startProjectile();
     } else if (tempProjectileStorage != NONE) {
       projectileState = tempProjectileStorage;
       tempProjectileStorage = NONE;
@@ -586,11 +592,11 @@ void damageHandler () {
         objectHealth--;
         damageDelayTimer.set(DAMAGEDELAYMS);
       }
-    } else if (projectileState == RCVROCKET){
-      if (damageDelayTimer.isExpired()) {
-        objectHealth = (objectHealth - 2);
-        damageDelayTimer.set(DAMAGEDELAYMS);
-      }
+//    } else if (projectileState == RCVROCKET){
+//      if (damageDelayTimer.isExpired()) {
+//        objectHealth = (objectHealth - 2);
+//        damageDelayTimer.set(DAMAGEDELAYMS);
+//      }
     }
     if (objectHealth <= 0) {
       objectState = NOTHING;
@@ -617,13 +623,13 @@ void displayHandler () {
             setColorOnFace(BULLETCOLOR, projectileTarget);
           }
           break;
-          case HASROCKET:
-          if ((ROCKETDELAY / 2) < projectileTimer.getRemaining()) {
-            setColorOnFace(ROCKETCOLOR, projectileSource);
-          } else {
-            setColorOnFace(ROCKETCOLOR, projectileTarget);
-          }
-          break;
+//          case HASROCKET:
+//          if ((ROCKETDELAY / 2) < projectileTimer.getRemaining()) {
+//            setColorOnFace(ROCKETCOLOR, projectileSource);
+//          } else {
+//            setColorOnFace(ROCKETCOLOR, projectileTarget);
+//          }
+//          break;
         }
       break;
     case HASWALL:
@@ -661,6 +667,9 @@ void displayHandler () {
 //      }
       if (projectileState == ISUNDEAD) {
         setColor(ZOMBIECOLOR);
+        if (attacking) {
+          setColorOnFace(makeColorRGB(255 - (biteTimer.getRemaining()/2 - 70), 0, 0),biteTarget);
+        }
       }
       break;
     case REQTANK:
@@ -702,13 +711,14 @@ void displayHandler () {
 //  }
 }
 
-void lightAllButTwo (Color lightColor, int firstFace, int secondFace) {
-  FOREACH_FACE(f) {
-    if (f != firstFace && f != secondFace) {
-      setColorOnFace(lightColor, f);
-    }
-  }
-}
+//
+//void lightAllButTwo (Color lightColor, int firstFace, int secondFace) {
+//  FOREACH_FACE(f) {
+//    if (f != firstFace && f != secondFace) {
+//      setColorOnFace(lightColor, f);
+//    }
+//  }
+//}
 
 void targetedSend(int targetFace, byte sendOne, byte sendOthers) {
   FOREACH_FACE(f) {
@@ -733,11 +743,11 @@ void commsHandler() {
         targetFace = projectileTarget;
         targetComms = projectileState;
       }
-      if (projectileState == RCVBULLET || projectileState == RCVROCKET) {
-        sendingProjectile = true;
-        targetFace = projectileSource;
-        targetComms = projectileState;
-      }
+//      if (projectileState == RCVBULLET || projectileState == RCVROCKET) {
+//        sendingProjectile = true;
+//        targetFace = projectileSource;
+//        targetComms = projectileState;
+//      }
       break;
     case HASWALL:
       if (wallSpawning){
@@ -745,20 +755,21 @@ void commsHandler() {
       } else {
         objectComms = NOTHING;
       }
-      if (projectileState == RCVBULLET || projectileState == RCVROCKET) {
+      if (projectileState == RCVBULLET) { //|| projectileState == RCVROCKET) {
         sendingProjectile = true;
         targetFace = projectileSource;
         targetComms = projectileState;
       }
       break;
     case HASTANK:
-      if (projectileState == RCVBULLET || projectileState == RCVROCKET) {
+      if (projectileState == RCVBULLET) { //|| projectileState == RCVROCKET) {
         sendingProjectile = true;
         targetFace = projectileSource;
         targetComms = projectileState;
       }
-      if (projectileState == ISUNDEAD && (biteTarget >= 0)) {
-        if ( getObjectStateFromDirection(biteTarget) == HASTANK ){
+      if (projectileState == ISUNDEAD && attacking && biteTimer.isExpired()) {
+        
+        if ( getObjectStateFromDirection(biteTarget) == HASTANK && getProjectileStateFromDirection(biteTarget) != ISUNDEAD){
           sendingProjectile = true;
           targetFace = biteTarget;
           targetComms = SENDBULLET; // bite for one damage
