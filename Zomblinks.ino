@@ -27,9 +27,9 @@
 #define MELEEDAMAGE 2
 
 // Zombie variables
-#define SHAMBLEDELAY 1400
+#define SHAMBLEDELAY 1200
 #define HUMANSCENT 16
-#define BITEDELAYMS 650
+#define BITEDELAYMS 550
 #define MINHUNGER 2
 #define MAXHUNGER 4
 #define SPAWNTRIGGER 1
@@ -294,13 +294,13 @@ void checkForMelee() {
 void biteTheLiving() {
   FOREACH_FACE(f) {
     if (!isValueReceivedOnFaceExpired(f) && (biteTarget < 0) && (getObjectStateFromDirection(f) == HASTANK) && !(getProjectileStateFromDirection(f) == ISUNDEAD)) {
-      if (!attacking){
+      if (!attacking) {
         biteTimer.set(BITEDELAYMS);
         attacking = true;
         biteTarget = f;
       } else {
         if (biteTimer.isExpired()) {
-          attacking = false;
+        attacking = false;
         }
       }
     }
